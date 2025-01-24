@@ -1,57 +1,36 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "./AuthProvider";
+import { useDispatch } from "react-redux";
+import { setToken } from "../redux/slices/authSlice";
 
 const SAMLPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const dispatch = useDispatch();
 
   const handleSAMLLogin = () => {
-    // Simulate redirecting to a SAML authentication flow
-    const mockToken = "mock-saml-token"; // Simulated token
+    const authEndpoint = "http://localhost:3000/mock-saml-authorize";
+    const redirectUri = "http://localhost:3000/login/saml";
+    const samlRequest = "mock-saml-request";
 
-    // Redirect back with token in the URL fragment
-    const redirectUri = "http://localhost:3000/login/saml"; // App's callback URI
-    const fragment = `access_token=${mockToken}&token_type=bearer&expires_in=3600`;
-
-    window.location.href = `${redirectUri}#${fragment}`;
+    const url = `${authEndpoint}?SAMLRequest=${encodeURIComponent(samlRequest)}&RelayState=${encodeURIComponent(
+      redirectUri
+    )}`;
+    window.location.href = url;
   };
 
   useEffect(() => {
     const handleTokenExtraction = () => {
-      const hash = window.location.hash;
-      if (hash) {
-        const params = new URLSearchParams(hash.substring(1)); // Extract token from the fragment
-        const token = params.get("access_token");
-        if (token) {
-          login(token); // Store the token
-
-          // After a slight delay, navigate to the protected page
-          setTimeout(() => {
-            navigate("/protected/saml"); // Redirect to protected page
-          }, 1000); // Simulate a slight delay
-        } else {
-          // If token is empty or missing, redirect to main page
-          alert("Unauthorized access!");
-          navigate("/");
-        }
-      } else {
-        // If there's no hash, stay on the login page
-        navigate("/login/saml");
+      const params = new URLSearchParams(window.location.search);
+      const samlResponse = params.get("SAMLResponse");
+      if (samlResponse) {
+        const decodedResponse = decodeURIComponent(samlResponse);
+        dispatch(setToken(decodedResponse));
+        navigate("/protected/saml");
       }
     };
 
-    // Listen for changes in the URL fragment (hash)
-    window.addEventListener("hashchange", handleTokenExtraction, false);
-
-    // Initially check if the URL has a token
-    handleTokenExtraction();
-
-    // Cleanup the event listener when the component is unmounted
-    return () => {
-      window.removeEventListener("hashchange", handleTokenExtraction, false);
-    };
-  }, [login, navigate]); // Re-run this effect when login or navigate change
+    handleTokenExtraction(); // Check on component mount
+  }, [dispatch, navigate]);
 
   return (
     <div>

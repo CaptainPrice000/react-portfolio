@@ -1,24 +1,26 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "./AuthProvider";
+import { useDispatch, useSelector } from "react-redux";
+import { clearToken } from "../redux/slices/authSlice";
 
 const ProtectedPage = ({ pageType }) => {
   const navigate = useNavigate();
-  const { token, logout } = useAuth();
-
-  if (!token) {
-    return <h1>You are not authorized. Please login.</h1>;
-  }
+  const dispatch = useDispatch();
+  const token = useSelector((state) => state.auth.token);
 
   const handleLogout = () => {
-    logout(); // Clear the stored token
-    navigate("/"); // Redirect to the home page or login page
+    dispatch(clearToken());
+    navigate("/");
   };
+
+  if (!token) {
+    return <h1>Access Denied. Please log in first.</h1>;
+  }
 
   return (
     <div>
-      <h1>Welcome to the Protected Page!</h1>
-      <p>You're logged in with the {pageType} token.</p>
+      <h1>Welcome to the Protected {pageType} Page!</h1>
+      <p>Your token: {token}</p>
       <button onClick={handleLogout}>Logout</button>
     </div>
   );

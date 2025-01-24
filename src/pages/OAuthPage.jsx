@@ -1,57 +1,45 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "./AuthProvider";
+import { useDispatch } from "react-redux";
+import { setToken } from "../redux/slices/authSlice";
 
 const OAuthPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const dispatch = useDispatch();
 
   const handleOAuthLogin = () => {
-    // Simulate redirecting to an OAuth2.0 authorization server
-    const mockToken = ""; // Simulated token
+    // Simulate redirecting to an OAuth2 authorization server
+    const authEndpoint = "http://localhost:3000/mock-oauth-authorize";
+    const clientId = "mock-client-id";
+    const redirectUri = "http://localhost:3000/login/oauth";
+    const responseType = "token";
+    const scope = "read write";
+    const state = "random-state";
 
-    // Redirect back with token in the URL fragment
-    const redirectUri = "http://localhost:3000/login/oauth"; // App's callback URI
-    const fragment = `access_token=${mockToken}&token_type=bearer&expires_in=3600`;
-
-    window.location.href = `${redirectUri}#${fragment}`;
+    const url = `${authEndpoint}?response_type=${responseType}&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
+    window.location.href = url;
   };
 
   useEffect(() => {
-    const handleTokenExtraction = () => {
+    const handleHashChange = () => {
       const hash = window.location.hash;
       if (hash) {
-        const params = new URLSearchParams(hash.substring(1)); // Extract token from the fragment
+        const params = new URLSearchParams(hash.substring(1));
         const token = params.get("access_token");
         if (token) {
-          login(token); // Store the token
-
-          // After a slight delay, navigate to the protected page
-          setTimeout(() => {
-            navigate("/protected/oauth"); // Redirect to protected page
-          }, 1000); // Simulate a slight delay
-        } else {
-          // If token is empty or missing, redirect to main page
-          alert("Unauthorized access!");
-          navigate("/");
+          dispatch(setToken(token));
+          navigate("/protected/oauth");
         }
-      } else {
-        // If there's no hash, stay on the login page
-        navigate("/login/oauth");
       }
     };
 
-    // Listen for changes in the URL fragment (hash)
-    window.addEventListener("hashchange", handleTokenExtraction, false);
+    handleHashChange(); // Check on component mount
+    window.addEventListener("hashchange", handleHashChange);
 
-    // Initially check if the URL has a token
-    handleTokenExtraction();
-
-    // Cleanup the event listener when the component is unmounted
     return () => {
-      window.removeEventListener("hashchange", handleTokenExtraction, false);
+      window.removeEventListener("hashchange", handleHashChange);
     };
-  }, [login, navigate]); // Re-run this effect when login or navigate change
+  }, [dispatch, navigate]);
 
   return (
     <div>
